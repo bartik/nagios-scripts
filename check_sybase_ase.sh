@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # This file is subject to the terms and conditions of the GNU General Public
-# License v.3.  See the file "COPYING" in the main directory of this archive
+# License v.3.  See the file "LICENSE" in the main directory of this archive
 # for more details.
 #
 #
