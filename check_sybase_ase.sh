@@ -7,6 +7,7 @@
 #
 # Author: Adam Leszczynski, aleszczynski@bersler.com
 # Version: 1.0, 30.11.2017
+# Home page: https://www.bersler.com/blog/nagios-script-for-checking-sap-adaptive-server-enterprise-sybase-ase/
 # 
 # Script for monitoring SAP (Sybase) Adaptive Server Enterprise (ASE) using Nagios
 #
