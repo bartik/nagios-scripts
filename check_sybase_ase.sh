@@ -9,6 +9,8 @@
 # Version: 1.0, 30.11.2017
 # Home page: https://www.bersler.com/blog/nagios-script-for-checking-sap-adaptive-server-enterprise-sybase-ase/
 # 
+# FIX Luis Reinoso from Chile
+# 
 # Script for monitoring SAP (Sybase) Adaptive Server Enterprise (ASE) using Nagios
 #
 # 
@@ -37,14 +39,14 @@ SERVER=
 LOGIN=
 PASSWORD=
 CHARACTERSET=iso_1
-SYBASE=/opt/sybase
+SYBASE=/sybase/*
 
 # variables
 NUMDATABASES=0
 NUMPROCESSES=0
 EXTRAINFO=""
 
-while getopts "S:U:P:c:?" opt; do
+while getopts "S:U:P:C:X:?" opt; do
   case $opt in
     S)
 	  SERVER=$OPTARG
@@ -87,59 +89,8 @@ unset LANG
 
 
 ########################################################################
-#test connect
-out=`isql -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET << EOF | tail -n +4
-$PASSWORD
-set nocount on
-go
-select @@version
-go
-EOF`
-
-alive=`echo "$out" | grep "Adaptive Server Enterprise"`
-if [ -z "$alive" ]; then
-	echo "ASE SERVER CRITICAL - Unable to connnect|databases=$NUMDATABASES processes=$NUMPROCESSES"
-	exit
-fi;
-
-########################################################################
-#log full
-out=`isql -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET << EOF | tail -n +4
-$PASSWORD
-set nocount on
-set transaction isolation level 0
-go
-select name, case when name = 'tempdb' or (status3 & 256) = 256 then 'tempdb' else 'user' end as dbtype
-from master..sysdatabases where lct_admin("logfull", dbid) = 1
-go
-EOF`
-logfulldbs=""
-numlogfulldbs=0
-IFS=$'\n'
-for a in $out; do
-	dbname=`echo "$a" | awk '{ print $1 }'`
-	dbtype=`echo "$a" | awk '{ print $2 }'`
-	
-	if [ "$dbtype" == "tempdb" ]; then
-		echo "ASE SERVER CRITICAL - log full in temporary db $dbname|databases=$NUMDATABASES processes=$NUMPROCESSES"
-		exit
-	fi
-	if [ "$logfulldbs" == "" ]; then
-		logfulldbs=$dbname
-	else
-		logfulldbs="$logfulldbs, $dbname"
-	fi;
-	numlogfulldbs=$((numlogfulldbs+1))
-done;
-
-if [ ! -z "$logfulldbs" ]; then
-	echo "ASE SERVER CRITICAL - log full in $numlogfulldbs dbs: $logfulldbs|databases=$NUMDATABASES processes=$NUMPROCESSES"
-	exit
-fi;
-
-########################################################################
 #statistical information
-out=`isql -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET << EOF | tail -n +4
+out=`isql64 -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET -X << EOF | tail -n +4
 $PASSWORD
 set nocount on
 set transaction isolation level 0
@@ -155,8 +106,63 @@ NUMDATABASES=`echo "$out" | awk '{ print $1 }'`
 NUMPROCESSES=`echo "$out" | awk '{ print $2 }'`
 
 ########################################################################
+#test connect
+out=`isql64 -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET -X << EOF | tail -n +4
+$PASSWORD
+set nocount on
+go
+select @@version
+go
+EOF`
+
+alive=`echo "$out" | grep "Adaptive Server Enterprise"`
+if [ -z "$alive" ]; then
+	echo "ASE SERVER CRITICAL - Unable to connnect|databases=$NUMDATABASES processes=$NUMPROCESSES"
+	exit 2
+fi;
+
+########################################################################
+#log full
+out=`isql64 -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET -X << EOF | tail -n +4
+$PASSWORD
+set nocount on
+set transaction isolation level 0
+go
+select name, case when name = 'tempdb' or (status3 & 256) = 256 then 'tempdb' else 'user' end as dbtype
+from master..sysdatabases where lct_admin("logfull", dbid) = 1
+go
+EOF`
+logfulldbs=""
+numlogfulldbs=0
+IFS=$'\n'
+for a in $out; do
+	dbname=`echo "$a" | awk '{ print $1 }'`
+	dbtype=`echo "$a" | awk '{ print $2 }'`
+	DBerror=`echo "$a" | awk -F- '{ print "Problem "$1 }'`
+
+	if [ "$dbtype" == "tempdb" ]; then
+		echo "ASE SERVER CRITICAL - log full in temporary db $dbname|databases=$NUMDATABASES processes=$NUMPROCESSES"
+		exit 2
+	fi;
+	if [ "$logfulldbs" == "" ]; then
+		logfulldbs=$dbname
+	else
+		logfulldbs="$logfulldbs, $dbname"
+	fi;
+	if [ "$dbname" == "Database" ]; then
+		logfulldbs=$DBerror
+	fi;
+	numlogfulldbs=$((numlogfulldbs+1))
+done;
+
+if [ ! -z "$logfulldbs" ]; then
+	echo "ASE SERVER CRITICAL - log full in $numlogfulldbs dbs: $logfulldbs|databases=$NUMDATABASES processes=$NUMPROCESSES"
+	exit 2
+fi;
+
+########################################################################
 #blocked processes
-out=`isql -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET << EOF | tail -n +4
+out=`isql64 -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET -X << EOF | tail -n +4
 $PASSWORD
 set nocount on
 set transaction isolation level 0
@@ -187,12 +193,12 @@ done;
 
 if [ ! -z "$blockedprocesses" ]; then
 	echo "ASE SERVER CRITICAL - $numblockedprocesses blocked processes SPID: $blockedprocesses|databases=$NUMDATABASES processes=$NUMPROCESSES"
-	exit
+	exit 2
 fi;
 
 ########################################################################
 #long running transactions
-out=`isql -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET << EOF | tail -n +4
+out=`isql64 -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET -X << EOF | tail -n +4
 $PASSWORD
 set nocount on
 set transaction isolation level 0
@@ -215,13 +221,13 @@ done;
 
 if [ ! -z "$databasessuspended" ]; then
 	echo "ASE SERVER CRITICAL - $numlongrunningtransactions long running transactions: $longrunningtransactions |databases=$NUMDATABASES processes=$NUMPROCESSES"
-	exit
+	exit 2
 fi;
 
 
 ########################################################################
 #free space
-out=`isql -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET << EOF | tail -n +4
+out=`isql64 -U$LOGIN -S$SERVER -w500 -J$CHARACTERSET -X << EOF | tail -n +4
 $PASSWORD
 set nocount on
 set transaction isolation level 0
@@ -289,8 +295,10 @@ done;
 if [ ! -z "$fulldb" ]; then
 	if [ ! -z "$error" ]; then
 		echo "ASE SERVER CRITICAL - $numfulldb space: $fulldb |databases=$NUMDATABASES processes=$NUMPROCESSES ${EXTRAINFO}"
+		exit 2
 	else
 		echo "ASE SERVER WARNING - $numfulldb space: $fulldb |databases=$NUMDATABASES processes=$NUMPROCESSES ${EXTRAINFO}"
+		exit 1
 	fi;
 	exit
 fi;
@@ -298,4 +306,4 @@ fi;
 
 ########################################################################
 #all is ok
-echo "ASE SERVER OK |databases=$NUMDATABASES processes=$NUMPROCESSES ${EXTRAINFO}"
+echo "ASE SERVER OK - Databases $NUMDATABASES - Processes $NUMPROCESSES - DB $(echo $SYBASE | awk -F/ '{print $NF}') |databases=$NUMDATABASES processes=$NUMPROCESSES ${EXTRAINFO}"
