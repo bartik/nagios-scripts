@@ -1,0 +1,14 @@
+SAPSYSTEMNAME = SAP
+SAPSYSTEM = 99
+DIR_LIBRARY = /usr/sap/hostctrl/exe
+DIR_EXECUTABLE = /usr/sap/hostctrl/exe
+DIR_PROFILE = /usr/sap/hostctrl/exe
+DIR_GLOBAL = /usr/sap/hostctrl/exe
+DIR_INSTANCE = /usr/sap/hostctrl/exe
+DIR_HOME = /usr/sap/hostctrl/work
+service/porttypes = SAPHostControl SAPOscol SAPCCMS
+DIR_NEW = /export/SAP/software/saphostagent/AIX/powerpc
+#DIR_NEW = /export/SAP/software/saphostagent/Linux/x86_64
+#DIR_NEW = /export/SAP/software/saphostagent/Linux/ppc64le
+#DIR_NEW = /export/SAP/software/saphostagent/Windows/x86_64
+hostexec/autoupgrade_delay=5
