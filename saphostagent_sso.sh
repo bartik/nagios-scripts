@@ -52,7 +52,7 @@ _arg_pse=
 _arg_tmp="/tmp/"
 _arg_subject=
 _arg_user="sapadm"
-_arg_pass="OSsolman72"
+_arg_pass="THEpassword99"
 _arg_ip=$(awk -v h="${_arg_host}" '$0 ~ h && /svc|service/ { print $1 }' /etc/hosts)
 _arg_rfile="rootCA"
 _arg_cfile="monitoringCA"
