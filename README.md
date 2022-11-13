@@ -1,6 +1,12 @@
-# nagios-scripts
-Scripts for monitoring using Nagios
+# sap-nagios-scripts
+Scripts for monitoring using Nagios modified to fit for reasons like:
+
+- not every nix* has a pgrep installed
+- Perl can be a ... to install on some platforms
+- You won't be allowed to install random ... in serious places to get the fancies running.
 
 * check_sybase_ase.sh
-Full description of script:
 https://www.bersler.com/blog/nagios-script-for-checking-sap-adaptive-server-enterprise-sybase-ase/
+
+* check_oracle
+https://www.monitoring-plugins.org/doc/man/check_oracle.html
